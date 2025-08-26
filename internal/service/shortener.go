@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"urlshortener/urlshortener/internal/model"
-	"urlshortener/urlshortener/internal/repo"
-	"urlshortener/urlshortener/internal/util"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"urlshortener/urlshortener/internal/model"
+	"urlshortener/urlshortener/internal/repo"
+	"urlshortener/urlshortener/internal/util"
 )
 
 const PgUniqueViolation pq.ErrorCode = "23505"
@@ -56,7 +56,6 @@ func (s *shortener) Shorten(ctx context.Context, baseUrl, long string) (model.UR
 
 func (s *shortener) Resolve(ctx context.Context, code string) (string, error) {
 	rec, err := s.r.GetByCode(ctx, code)
-
 	if err != nil {
 		return "", err
 	}

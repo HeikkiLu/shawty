@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+
 	"urlshortener/urlshortener/internal/config"
 	"urlshortener/urlshortener/internal/db"
 	"urlshortener/urlshortener/internal/http"
@@ -9,13 +10,11 @@ import (
 
 func main() {
 	cfg, err := config.Load()
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	pg, err := db.Open(cfg)
-
 	if err != nil {
 		log.Fatal(err)
 	}

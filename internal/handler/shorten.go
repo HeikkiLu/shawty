@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 	"net/url"
+
+	"github.com/gin-gonic/gin"
 	"urlshortener/urlshortener/internal/config"
 	"urlshortener/urlshortener/internal/model"
 	"urlshortener/urlshortener/internal/service"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -33,7 +33,6 @@ func (h *Handler) Shorten(c *gin.Context) {
 	}
 
 	rec, created, err := h.srv.Shorten(c.Request.Context(), h.cfg.BaseURL, parsedUrl.String())
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -44,5 +43,4 @@ func (h *Handler) Shorten(c *gin.Context) {
 	} else {
 		c.IndentedJSON(http.StatusOK, rec)
 	}
-
 }

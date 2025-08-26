@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+
 	"urlshortener/urlshortener/internal/config"
 )
 
