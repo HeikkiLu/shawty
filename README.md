@@ -123,12 +123,6 @@ Test suite includes:
 # Format code
 make fmt
 
-# Run linter
-make lint
-
-# Run security checks
-make security
-
 # Run all quality checks
 make check
 ```
