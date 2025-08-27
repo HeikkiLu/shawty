@@ -54,7 +54,7 @@ curl -X POST http://localhost:3001/shorten \
 }
 ```
 
-### (TODO) Use the Short URL
+### Use the Short URL
 
 Simply visit the `short_url` in your browser or make a GET request:
 
