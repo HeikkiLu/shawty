@@ -18,6 +18,7 @@ import (
 	httpserver "urlshortener/urlshortener/internal/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/sbowman/dotenv"
 )
@@ -618,10 +619,11 @@ var noFollow = &http.Client{
 
 func seedRecord(t *testing.T, code, long, base string) {
 	t.Helper()
+	id := uuid.New().String()
 	_, err := testDB.Exec(`
         INSERT INTO url_records (id, code, long_url, short_url, created_at)
         VALUES ($1, $2, $3, $4, NOW())
-    `, "seed-"+code, code, long, base+code)
+    `, id, code, long, base+code)
 	if err != nil {
 		t.Fatalf("seed insert failed: %v", err)
 	}
