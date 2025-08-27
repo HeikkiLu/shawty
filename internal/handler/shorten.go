@@ -1,13 +1,15 @@
 package handler
 
 import (
+	"mime"
 	"net/http"
 	"net/url"
 
-	"github.com/gin-gonic/gin"
 	"urlshortener/urlshortener/internal/config"
 	"urlshortener/urlshortener/internal/model"
 	"urlshortener/urlshortener/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
@@ -19,6 +21,16 @@ func New(cfg config.Config, srv service.Shortener) *Handler { return &Handler{cf
 
 // POST /shorten
 func (h *Handler) Shorten(c *gin.Context) {
+
+	ct := c.GetHeader("Content-Type")
+
+	mt, _, err := mime.ParseMediaType(ct)
+
+	if err != nil || mt != "application/json" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Content-Type must be application/json"})
+		return
+	}
+
 	var req model.CreateReq
 
 	if err := c.ShouldBindJSON(&req); err != nil {
