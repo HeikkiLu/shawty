@@ -25,9 +25,11 @@ type shortener struct{ r repo.URLRepo }
 func NewShortener(r repo.URLRepo) Shortener { return &shortener{r} }
 
 func (s *shortener) Shorten(ctx context.Context, baseUrl, long string) (model.URLRecord, bool, error) {
-	// Record already exists
-	if rec, err := s.r.GetByLong(ctx, long); err == nil {
-		return rec, false, nil
+	// Check if record already exists with retry for concurrent scenarios
+	for i := 0; i < 2; i++ {
+		if rec, err := s.r.GetByLong(ctx, long); err == nil {
+			return rec, false, nil
+		}
 	}
 
 	for attempt := 0; attempt < 5; attempt++ {
@@ -45,11 +47,11 @@ func (s *shortener) Shorten(ctx context.Context, baseUrl, long string) (model.UR
 			return model.URLRecord{}, false, err
 		}
 
-		if strings.Contains(pqErr.Detail, "(code)") || strings.Contains(pqErr.Message, "code") {
+		if strings.Contains(pqErr.Detail, "code") || strings.Contains(pqErr.Message, "code") {
 			continue
 		}
 
-		if strings.Contains(pqErr.Detail, "(long_url)") || strings.Contains(pqErr.Message, "long_url") {
+		if strings.Contains(pqErr.Detail, "long_url") || strings.Contains(pqErr.Message, "long_url") {
 			if rec, rec_err := s.r.GetByLong(ctx, long); rec_err == nil {
 				return rec, false, nil
 			}

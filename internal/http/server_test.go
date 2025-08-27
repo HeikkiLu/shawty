@@ -14,6 +14,7 @@ import (
 	"urlshortener/urlshortener/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/sbowman/dotenv"
 )
@@ -588,7 +589,7 @@ func TestServer_Redirect_Success(t *testing.T) {
 	cfg := config.Config{BaseURL: "https://shawt.ly/"}
 	srv := NewServer(cfg, testDB)
 
-	id := "123e4567-e89b-12d3-a456-426614174000"
+	id := uuid.New().String()
 	code := "AbC123"
 	long := "https://example.com/landing"
 	insertURL(t, testDB, id, code, long, cfg.BaseURL)
