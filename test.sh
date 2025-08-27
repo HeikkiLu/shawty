@@ -109,11 +109,11 @@ setup_test_database() {
     print_info "Setting up test table"
     psql -h "$TEST_DB_HOST" -p "$TEST_DB_PORT" -U "$TEST_DB_USER" -d "$TEST_DB_NAME" << EOF
 CREATE TABLE IF NOT EXISTS url_records (
-    id VARCHAR(36) PRIMARY KEY,
-    code VARCHAR(10) UNIQUE NOT NULL,
-    long_url TEXT UNIQUE NOT NULL,
+    id UUID PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    long_url TEXT NOT NULL UNIQUE,
     short_url TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 EOF
 

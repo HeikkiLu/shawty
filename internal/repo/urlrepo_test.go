@@ -93,11 +93,11 @@ func createTestDatabase(user, pass, dbname, host, port, sslmode string) error {
 func createTestTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS url_records (
-			id VARCHAR(36) PRIMARY KEY,
-			code VARCHAR(10) UNIQUE NOT NULL,
-			long_url TEXT UNIQUE NOT NULL,
+			id UUID PRIMARY KEY,
+			code TEXT NOT NULL UNIQUE,
+			long_url TEXT NOT NULL UNIQUE,
 			short_url TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 		)`
 
 	_, err := db.Exec(query)
@@ -129,7 +129,7 @@ func TestPostgresRepo_Insert(t *testing.T) {
 	// Clean up before test
 	testDB.Exec("DELETE FROM url_records")
 
-	id := "test-id-1"
+	id := "123e4567-e89b-12d3-a456-426614174000"
 	code := "ABC123"
 	longURL := "https://example.com/test"
 	shortURL := "https://shawt.ly/ABC123"
@@ -183,13 +183,13 @@ func TestPostgresRepo_Insert_DuplicateCode(t *testing.T) {
 	testDB.Exec("DELETE FROM url_records")
 
 	// Insert first record
-	_, err := repo.Insert(ctx, "id1", "DUP123", "https://example.com/1", "https://shawt.ly/DUP123")
+	_, err := repo.Insert(ctx, "123e4567-e89b-12d3-a456-426614174001", "DUP123", "https://example.com/1", "https://shawt.ly/DUP123")
 	if err != nil {
 		t.Fatalf("First insert failed: %v", err)
 	}
 
 	// Try to insert with same code
-	_, err = repo.Insert(ctx, "id2", "DUP123", "https://example.com/2", "https://shawt.ly/DUP123")
+	_, err = repo.Insert(ctx, "123e4567-e89b-12d3-a456-426614174002", "DUP123", "https://example.com/2", "https://shawt.ly/DUP123")
 	if err == nil {
 		t.Error("Expected error for duplicate code")
 	}
@@ -216,13 +216,13 @@ func TestPostgresRepo_Insert_DuplicateLongURL(t *testing.T) {
 	longURL := "https://example.com/duplicate"
 
 	// Insert first record
-	_, err := repo.Insert(ctx, "id1", "CODE1", longURL, "https://shawt.ly/CODE1")
+	_, err := repo.Insert(ctx, "123e4567-e89b-12d3-a456-426614174003", "CODE1", longURL, "https://shawt.ly/CODE1")
 	if err != nil {
 		t.Fatalf("First insert failed: %v", err)
 	}
 
 	// Try to insert with same long URL
-	_, err = repo.Insert(ctx, "id2", "CODE2", longURL, "https://shawt.ly/CODE2")
+	_, err = repo.Insert(ctx, "123e4567-e89b-12d3-a456-426614174004", "CODE2", longURL, "https://shawt.ly/CODE2")
 	if err == nil {
 		t.Error("Expected error for duplicate long URL")
 	}
@@ -246,7 +246,7 @@ func TestPostgresRepo_GetByLong(t *testing.T) {
 	// Clean up and insert test data
 	testDB.Exec("DELETE FROM url_records")
 
-	id := "test-id-get-long"
+	id := "123e4567-e89b-12d3-a456-426614174005"
 	code := "GETLONG"
 	longURL := "https://example.com/get-by-long"
 	shortURL := "https://shawt.ly/GETLONG"
@@ -308,7 +308,7 @@ func TestPostgresRepo_GetByCode(t *testing.T) {
 	// Clean up and insert test data
 	testDB.Exec("DELETE FROM url_records")
 
-	id := "test-id-get-code"
+	id := "123e4567-e89b-12d3-a456-426614174006"
 	code := "GETCODE"
 	longURL := "https://example.com/get-by-code"
 	shortURL := "https://shawt.ly/GETCODE"
@@ -377,9 +377,9 @@ func TestPostgresRepo_Integration(t *testing.T) {
 		longURL  string
 		shortURL string
 	}{
-		{"id1", "CODE1", "https://example.com/1", "https://shawt.ly/CODE1"},
-		{"id2", "CODE2", "https://example.com/2", "https://shawt.ly/CODE2"},
-		{"id3", "CODE3", "https://example.com/3", "https://shawt.ly/CODE3"},
+		{"123e4567-e89b-12d3-a456-426614174007", "CODE1", "https://example.com/1", "https://shawt.ly/CODE1"},
+		{"123e4567-e89b-12d3-a456-426614174008", "CODE2", "https://example.com/2", "https://shawt.ly/CODE2"},
+		{"123e4567-e89b-12d3-a456-426614174009", "CODE3", "https://example.com/3", "https://shawt.ly/CODE3"},
 	}
 
 	// Insert all records

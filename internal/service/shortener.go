@@ -5,11 +5,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"urlshortener/urlshortener/internal/model"
 	"urlshortener/urlshortener/internal/repo"
 	"urlshortener/urlshortener/internal/util"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const PgUniqueViolation pq.ErrorCode = "23505"
@@ -29,26 +30,32 @@ func (s *shortener) Shorten(ctx context.Context, baseUrl, long string) (model.UR
 		return rec, false, nil
 	}
 
-	code := util.GenerateCode()
-	short := baseUrl + code
-	id := uuid.New().String()
-
 	for attempt := 0; attempt < 5; attempt++ {
+		code := util.GenerateCode()
+		short := baseUrl + code
+		id := uuid.New().String()
+
 		rec, err := s.r.Insert(ctx, id, code, long, short)
 		if err == nil {
 			return rec, true, nil
 		}
+
 		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == PgUniqueViolation && strings.Contains(pqErr.Detail, "(code)") {
-			code = util.GenerateCode()
-			short = baseUrl + code
+		if !errors.As(err, &pqErr) || pqErr.Code != PgUniqueViolation {
+			return model.URLRecord{}, false, err
+		}
+
+		if strings.Contains(pqErr.Detail, "(code)") || strings.Contains(pqErr.Message, "code") {
 			continue
 		}
-		if errors.As(err, &pqErr) && pqErr.Code == PgUniqueViolation && strings.Contains(pqErr.Detail, "(long_url)") {
+
+		if strings.Contains(pqErr.Detail, "(long_url)") || strings.Contains(pqErr.Message, "long_url") {
 			if rec, rec_err := s.r.GetByLong(ctx, long); rec_err == nil {
 				return rec, false, nil
 			}
+			return model.URLRecord{}, false, err
 		}
+
 		return model.URLRecord{}, false, err
 	}
 	return model.URLRecord{}, false, errors.New("Could not allocate unique code")

@@ -198,11 +198,11 @@ CREATE DATABASE urlshortener_test;
 
 -- Create table
 CREATE TABLE url_records (
-    id VARCHAR(36) PRIMARY KEY,
-    code VARCHAR(10) UNIQUE NOT NULL,
-    long_url TEXT UNIQUE NOT NULL,
+    id UUID PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    long_url TEXT NOT NULL UNIQUE,
     short_url TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
