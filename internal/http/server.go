@@ -18,6 +18,9 @@ func NewServer(cfg config.Config, db *sql.DB) *gin.Engine {
 	sv := service.NewShortener(rp)
 	h := handler.New(cfg, sv)
 
+	r.StaticFile("/", "./site/index.html")
+	r.StaticFile("/favicon.ico", "./site/favicon.ico")
+
 	r.POST("/shorten", h.Shorten)
 	r.GET("/:code", h.Redirect)
 
