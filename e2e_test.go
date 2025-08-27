@@ -609,3 +609,60 @@ func BenchmarkE2E_ShortenURL(b *testing.B) {
 		}
 	}
 }
+
+var noFollow = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
+func seedRecord(t *testing.T, code, long, base string) {
+	t.Helper()
+	_, err := testDB.Exec(`
+        INSERT INTO url_records (id, code, long_url, short_url, created_at)
+        VALUES ($1, $2, $3, $4, NOW())
+    `, "seed-"+code, code, long, base+code)
+	if err != nil {
+		t.Fatalf("seed insert failed: %v", err)
+	}
+}
+
+func TestE2E_Redirect_Success(t *testing.T) {
+	if err := clearDatabase(); err != nil {
+		t.Fatalf("clear db: %v", err)
+	}
+	code := "AbC123"
+	long := "https://example.com/landing"
+	seedRecord(t, code, long, testConfig.BaseURL)
+
+	resp, err := noFollow.Get(testServer.URL + "/" + code)
+	if err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("expected 302, got %d", resp.StatusCode)
+	}
+	if loc := resp.Header.Get("Location"); loc != long {
+		t.Fatalf("expected Location=%q, got %q", long, loc)
+	}
+}
+
+func TestE2E_Redirect_NotFound(t *testing.T) {
+	if err := clearDatabase(); err != nil {
+		t.Fatalf("clear db: %v", err)
+	}
+	resp, err := noFollow.Get(testServer.URL + "/DOESNTEXIST")
+	if err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+	if loc := resp.Header.Get("Location"); loc != "" {
+		t.Fatalf("did not expect Location, got %q", loc)
+	}
+}

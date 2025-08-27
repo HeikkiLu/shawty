@@ -10,15 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"urlshortener/urlshortener/internal/config"
 	"urlshortener/urlshortener/internal/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Mock shortener service for testing
 type mockShortener struct {
-	shortenFunc func(ctx context.Context, baseURL, long string) (model.URLRecord, bool, error)
-	resolveFunc func(ctx context.Context, code string) (string, error)
+	shortenFunc  func(ctx context.Context, baseURL, long string) (model.URLRecord, bool, error)
+	resolveFunc  func(ctx context.Context, code string) (string, error)
+	redirectFunc func(ctx context.Context, code string) (string, error)
 }
 
 func (m *mockShortener) Shorten(ctx context.Context, baseURL, long string) (model.URLRecord, bool, error) {
@@ -497,5 +499,113 @@ func BenchmarkHandler_Shorten(b *testing.B) {
 		if w.Code != http.StatusCreated {
 			b.Fatalf("Expected status %d, got %d", http.StatusCreated, w.Code)
 		}
+	}
+}
+
+func TestHandler_Redirect_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	mockSrv := &mockShortener{
+		resolveFunc: func(ctx context.Context, code string) (string, error) {
+			if code != "AbC123" {
+				return "", errors.New("unexpected code")
+			}
+			return "https://example.com/landing", nil
+		},
+	}
+	h := New(cfg, mockSrv)
+
+	r := gin.New()
+	r.GET("/:code", h.Redirect)
+
+	req := httptest.NewRequest(http.MethodGet, "/AbC123", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected %d, got %d", http.StatusFound, w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "https://example.com/landing" {
+		t.Fatalf("expected Location=https://example.com/landing, got %q", loc)
+	}
+}
+
+func TestHandler_Redirect_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	mockSrv := &mockShortener{
+		resolveFunc: func(ctx context.Context, code string) (string, error) {
+			return "", errors.New("not found")
+		},
+	}
+	h := New(cfg, mockSrv)
+
+	r := gin.New()
+	r.GET("/:code", h.Redirect)
+
+	req := httptest.NewRequest(http.MethodGet, "/doesnt-exist", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected %d, got %d", http.StatusNotFound, w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "" {
+		t.Fatalf("did not expect Location header, got %q", loc)
+	}
+}
+
+func TestRouter_RoutePrecedence_ShortcodeDoesNotCaptureShorten(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	mockSrv := &mockShortener{
+		resolveFunc: func(ctx context.Context, code string) (string, error) {
+			return "https://example.org", nil
+		},
+	}
+	h := New(cfg, mockSrv)
+
+	r := gin.New()
+	// Minimal /shorten handler stub to assert we hit it
+	r.POST("/shorten", func(c *gin.Context) { c.Status(http.StatusCreated) })
+	r.GET("/:code", h.Redirect)
+
+	// POST /shorten should NOT be routed to /:code
+	req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBufferString(`{"url":"https://x"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d", w.Code)
+	}
+}
+
+func TestHandler_Redirect_HEAD_MirrorsGET(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	mockSrv := &mockShortener{
+		resolveFunc: func(ctx context.Context, code string) (string, error) {
+			return "https://example.com/head-ok", nil
+		},
+	}
+	h := New(cfg, mockSrv)
+
+	r := gin.New()
+	r.GET("/:code", h.Redirect)
+	r.HEAD("/:code", h.Redirect)
+
+	req := httptest.NewRequest(http.MethodHead, "/ABC", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected %d, got %d", http.StatusFound, w.Code)
+	}
+	if w.Header().Get("Location") != "https://example.com/head-ok" {
+		t.Fatalf("bad Location %q", w.Header().Get("Location"))
 	}
 }

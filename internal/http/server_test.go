@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/sbowman/dotenv"
 )
 
 var testDB *sql.DB
@@ -43,13 +44,15 @@ func TestMain(m *testing.M) {
 }
 
 func setupTestDB() (*sql.DB, error) {
+	dotenv.Load()
+
 	// Use environment variables or defaults for test database
-	dbUser := getEnvOrDefault("TEST_DB_USER", "postgres")
-	dbPass := getEnvOrDefault("TEST_DB_PASSWORD", "postgres")
-	dbName := getEnvOrDefault("TEST_DB_NAME", "urlshortener_test")
-	dbHost := getEnvOrDefault("TEST_DB_HOST", "localhost")
-	dbPort := getEnvOrDefault("TEST_DB_PORT", "5432")
-	dbSSLMode := getEnvOrDefault("TEST_DB_SSLMODE", "disable")
+	dbUser := dotenv.GetString("TEST_DB_USER")
+	dbPass := dotenv.GetString("TEST_DB_PASSWORD")
+	dbName := dotenv.GetString("TEST_DB_NAME")
+	dbHost := dotenv.GetString("TEST_DB_HOST")
+	dbPort := dotenv.GetString("TEST_DB_PORT")
+	dbSSLMode := dotenv.GetString("TEST_DB_SSLMODE")
 
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
 		dbUser, dbPass, dbName, dbHost, dbPort, dbSSLMode)
@@ -149,17 +152,18 @@ func TestNewServer(t *testing.T) {
 	}
 
 	// Check if POST /shorten route exists
+	// Check if GET /:code route exists
 	found := false
 	for _, route := range routes {
-		if route.Method == "POST" && route.Path == "/shorten" {
+		if route.Method == "POST" && route.Path == "/shorten" && route.Method == "GET" && route.Path == "/:code" {
 			found = true
-			break
 		}
 	}
 
 	if !found {
-		t.Error("Expected POST /shorten route to be configured")
+		t.Error("Expected POST /shorten or GET /:code route to be configured")
 	}
+
 }
 
 func TestServer_ShortenEndpoint_Integration(t *testing.T) {
@@ -543,5 +547,82 @@ func BenchmarkServer_ShortenEndpoint(b *testing.B) {
 		if w.Code != http.StatusCreated && w.Code != http.StatusOK {
 			b.Fatalf("Expected status 200 or 201, got %d", w.Code)
 		}
+	}
+}
+
+func insertURL(t *testing.T, db *sql.DB, id, code, long, base string) {
+	t.Helper()
+	short := base + code
+	_, err := db.Exec(`
+		INSERT INTO url_records (id, code, long_url, short_url)
+		VALUES ($1, $2, $3, $4)
+	`, id, code, long, short)
+	if err != nil {
+		t.Fatalf("seed insert failed: %v", err)
+	}
+}
+
+func TestServer_Redirect_Success(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Test database not available")
+	}
+	testDB.Exec("DELETE FROM url_records")
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	srv := NewServer(cfg, testDB)
+
+	id := "test-id-1"
+	code := "AbC123"
+	long := "https://example.com/landing"
+	insertURL(t, testDB, id, code, long, cfg.BaseURL)
+
+	req := httptest.NewRequest(http.MethodGet, "/"+code, nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("expected %d, got %d", http.StatusFound, w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != long {
+		t.Fatalf("expected Location=%q, got %q", long, loc)
+	}
+}
+
+func TestServer_Redirect_NotFound(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Test database not available")
+	}
+	testDB.Exec("DELETE FROM url_records")
+
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	srv := NewServer(cfg, testDB)
+
+	req := httptest.NewRequest(http.MethodGet, "/NOPE42", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected %d, got %d", http.StatusNotFound, w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "" {
+		t.Fatalf("did not expect Location header, got %q", loc)
+	}
+}
+
+func TestServer_RoutePrecedence(t *testing.T) {
+	if testDB == nil {
+		t.Skip("Test database not available")
+	}
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
+	srv := NewServer(cfg, testDB)
+
+	body, _ := json.Marshal(model.CreateReq{URL: "https://x"})
+	req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
+		t.Fatalf("expected 201 or 200, got %d", w.Code)
 	}
 }

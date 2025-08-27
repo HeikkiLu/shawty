@@ -56,3 +56,17 @@ func (h *Handler) Shorten(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, rec)
 	}
 }
+
+// Get /:code -> redirect
+func (h *Handler) Redirect(c *gin.Context) {
+	code := c.Param("code")
+
+	longUrl, err := h.srv.Resolve(c, code)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	c.Redirect(http.StatusFound, longUrl)
+}
