@@ -135,35 +135,38 @@ func TestNewServer(t *testing.T) {
 		t.Skip("Test database not available")
 	}
 
-	cfg := config.Config{
-		BaseURL: "https://shawt.ly/",
-	}
-
+	cfg := config.Config{BaseURL: "https://shawt.ly/"}
 	server := NewServer(cfg, testDB)
-
 	if server == nil {
 		t.Fatal("NewServer returned nil")
 	}
 
-	// Test that the server has the expected routes
 	routes := server.Routes()
 	if len(routes) == 0 {
-		t.Error("Expected server to have routes configured")
+		t.Fatal("expected server to have routes")
 	}
 
-	// Check if POST /shorten route exists
-	// Check if GET /:code route exists
-	found := false
-	for _, route := range routes {
-		if route.Method == "POST" && route.Path == "/shorten" && route.Method == "GET" && route.Path == "/:code" {
-			found = true
+	var (
+		foundPostShorten bool
+		foundGetCode     bool
+	)
+
+	// Check routes exist
+	for _, r := range routes {
+		if r.Method == http.MethodPost && r.Path == "/shorten" {
+			foundPostShorten = true
+		}
+		if r.Method == http.MethodGet && r.Path == "/:code" {
+			foundGetCode = true
 		}
 	}
 
-	if !found {
-		t.Error("Expected POST /shorten or GET /:code route to be configured")
+	if !foundPostShorten {
+		t.Error("expected route: POST /shorten")
 	}
-
+	if !foundGetCode {
+		t.Error("expected route: GET /:code")
+	}
 }
 
 func TestServer_ShortenEndpoint_Integration(t *testing.T) {

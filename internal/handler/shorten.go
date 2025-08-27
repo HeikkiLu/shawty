@@ -21,7 +21,6 @@ func New(cfg config.Config, srv service.Shortener) *Handler { return &Handler{cf
 
 // POST /shorten
 func (h *Handler) Shorten(c *gin.Context) {
-
 	ct := c.GetHeader("Content-Type")
 
 	mt, _, err := mime.ParseMediaType(ct)
@@ -62,7 +61,6 @@ func (h *Handler) Redirect(c *gin.Context) {
 	code := c.Param("code")
 
 	longUrl, err := h.srv.Resolve(c, code)
-
 	if err != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
