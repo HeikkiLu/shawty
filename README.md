@@ -15,17 +15,17 @@ A lightweigh URL shortener written in Go with PostgreSQL as the backend.
 
 ### Prerequisites
 
-- Go 1.23 or later
+- Go 1.24 or later
 - PostgreSQL 12 or later
 - Git
 
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/urlshortener
-cd urlshortener
+git clone https://github.com/heikkilu/shawty
+cd shawty
 cp .env.example .env   # update with your DB config
-make migrate-up
+make migrate-up # database schema and migrations with flyway
 make run
 ```
 
