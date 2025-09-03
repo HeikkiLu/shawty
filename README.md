@@ -217,14 +217,12 @@ export TEST_DB_PORT=5432
 
 ### Docker
 
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Compose                         │
-├─────────────────────┬───────────────────────────────────────┤
-│   App Container     │         PostgreSQL Container         │
-│   - Go Application  │         - Database                    │
-│   - Static Files    │         - Auto Migrations            │
-│   - Port 3001       │         - Port 5432                  │
-└─────────────────────┴───────────────────────────────────────┘
+| App Container                       | PostgreSQL Container          |
+|-------------------------------------|-------------------------------|
+| - Go Application                    | - Database                    |
+| - Static Files                      | - Auto Migrations             |
+| - Port 3001                         | - Port 5432                   |
+
 
 
 
