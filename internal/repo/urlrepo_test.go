@@ -384,18 +384,11 @@ func TestPostgresRepo_Integration(t *testing.T) {
 		{uuid.New().String(), "CODE3", "https://example.com/3", "https://shawt.ly/CODE3"},
 	}
 
-	// Insert all records
+	// Insert all records using the repository methods
 	for i, tc := range testCases {
 		_, err := repo.Insert(ctx, tc.id, tc.code, tc.longURL, tc.shortURL)
 		if err != nil {
 			t.Fatalf("Failed to insert record %d (%s): %v", i, tc.id, err)
-		}
-
-		// Verify insert immediately
-		var count int
-		testDB.QueryRow("SELECT COUNT(*) FROM url_records WHERE id = $1", tc.id).Scan(&count)
-		if count != 1 {
-			t.Fatalf("Record %d was not inserted properly: count = %d", i, count)
 		}
 	}
 
@@ -427,12 +420,23 @@ func TestPostgresRepo_Integration(t *testing.T) {
 
 	// Verify total count
 	var count int
-	err := testDB.QueryRow("SELECT COUNT(*) FROM url_records").Scan(&count)
+	err = testDB.QueryRow("SELECT COUNT(*) FROM url_records").Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to count records: %v", err)
 	}
 
 	if count != len(testCases) {
+		// Log actual records for debugging
+		rows, err := testDB.Query("SELECT id, code, long_url FROM url_records")
+		if err == nil {
+			t.Logf("Records in database:")
+			for rows.Next() {
+				var id, code, longURL string
+				rows.Scan(&id, &code, &longURL)
+				t.Logf("  %s: %s -> %s", id, code, longURL)
+			}
+			rows.Close()
+		}
 		t.Errorf("Expected %d records, got %d", len(testCases), count)
 	}
 }

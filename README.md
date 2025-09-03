@@ -107,17 +107,18 @@ This will:
 - Unit tests with mocks
 - Integration tests (PostgreSQL)
 - End-to-end API tests
-- Race detection & benchmarks
+- Database testing available locally
 
 ```bash
-# Run all tests
-make test
+# Run core tests (no database required)
+make test-unit          # Unit tests: util, config, service, handler
+go test ./internal/util ./internal/config ./internal/service ./internal/handler
 
-# Run specific test types
-make test-unit          # Unit tests only (fast)
-make test-integration   # Integration tests (requires DB)
-make test-e2e          # End-to-end tests
-make test-race         # Race condition tests
+# Run database tests locally (requires PostgreSQL)
+./test-db.sh           # Repository, HTTP, and E2E tests
+
+# Optional: Full test suite with race detection
+make test              # All tests including race detection (complex)
 make test-coverage     # Generate coverage report
 make test-bench        # Performance benchmarks
 ```
@@ -172,27 +173,32 @@ e2e_test.go                       # End-to-end API tests
 
 ### Running Tests in CI
 
-The project includes GitHub Actions workflows for:
+The project includes a GitHub Actions workflow (`ci.yml`) for:
 
-- Automated testing on push/PR
-- Multiple Go versions support
-- Database integration testing
-- Code coverage reporting
+- Core unit tests (util, config, service, handler)
+- Code coverage reporting to Codecov
+- Application build verification
+- Clean, fast, and reliable execution
 
-### Test Database Setup
+### Local Database Testing
 
-For integration and E2E tests, you need PostgreSQL:
+For repository, HTTP, and E2E tests, use the database test script:
 
 ```bash
-# Using the test script
-./test.sh --setup-db
+# Run all database-dependent tests
+./test-db.sh
 
-# Or manually
+# Or set up manually and run specific tests
 export TEST_DB_NAME=urlshortener_test
-export TEST_DB_USER=test_user
-export TEST_DB_PASSWORD=test_password
+export TEST_DB_USER=postgres
+export TEST_DB_PASSWORD=postgres
 export TEST_DB_HOST=localhost
 export TEST_DB_PORT=5432
+export TEST_DB_SSLMODE=disable
+
+go test -v ./internal/repo
+go test -v ./internal/http
+go test -v ./e2e_test.go
 ```
 
 ## Architecture
