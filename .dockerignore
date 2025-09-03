@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README*
+docs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+.zed
+
+# Environment files (will copy specific ones we need)
+.env*
+
+# Test files
+*_test.go
+test/
+coverage.out
+*.cover
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# Build artifacts
+bin/
+main
+urlshortener
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Backup files
+backups/
+*.backup
+*.bak
+*.sql
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+._*

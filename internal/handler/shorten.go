@@ -68,3 +68,11 @@ func (h *Handler) Redirect(c *gin.Context) {
 
 	c.Redirect(http.StatusFound, longUrl)
 }
+
+// GET /health
+func (h *Handler) Health(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "healthy",
+		"service": "urlshortener",
+	})
+}

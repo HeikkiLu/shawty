@@ -72,22 +72,23 @@ func setupTestDB() (*sql.DB, error) {
 }
 
 func createTestDatabase(user, pass, dbname, host, port, sslmode string) error {
-	// Connect to postgres database to create test database
-	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
-		user, pass, dbname, host, port, sslmode)
-
-	db, err := sql.Open("postgres", dsn)
+	// Connect to maintenance DB to create the test DB
+	adminDSN := fmt.Sprintf(
+		"user=%s password=%s dbname=postgres host=%s port=%s sslmode=%s",
+		user, pass, host, port, sslmode,
+	)
+	db, err := sql.Open("postgres", adminDSN)
 	if err != nil {
-		return err
+		return fmt.Errorf("open admin conn: %w", err)
 	}
 	defer db.Close()
 
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbname))
+	// CREATE DATABASE (idempotent-ish: ignore if exists)
+	_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, dbname))
 	if err != nil {
-		// Ignore error if database already exists
+		// Ignore if already exists
 		return nil
 	}
-
 	return nil
 }
 

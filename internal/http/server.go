@@ -22,6 +22,7 @@ func NewServer(cfg config.Config, db *sql.DB) *gin.Engine {
 	r.StaticFile("/favicon.ico", "./site/favicon.ico")
 
 	r.POST("/shorten", h.Shorten)
+	r.GET("/health", h.Health)
 	r.GET("/:code", h.Redirect)
 
 	return r

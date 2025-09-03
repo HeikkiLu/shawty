@@ -1,0 +1,45 @@
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${TEST_DB_NAME:-urlshortener_test}
+      POSTGRES_USER: ${TEST_DB_USER:-test_user}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:-test_password}
+    ports:
+      - "${TEST_DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./db/migration:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${TEST_DB_USER:-test_user} -d ${TEST_DB_NAME:-urlshortener_test}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app-test:
+    build:
+      context: .
+      target: builder
+    environment:
+      TEST_DB_HOST: postgres-test
+      TEST_DB_PORT: "5432"
+      TEST_DB_USER: ${TEST_DB_USER:-test_user}
+      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-test_password}
+      TEST_DB_NAME: ${TEST_DB_NAME:-urlshortener_test}
+      TEST_DB_SSLMODE: disable
+
+      BASE_URL: http://localhost:8080/
+      DOMAIN: 0.0.0.0
+      PORT: 8080
+      GIN_MODE: test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    command: go test -v ./...
+
+volumes:
+  postgres_test_data:

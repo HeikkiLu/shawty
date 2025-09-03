@@ -157,18 +157,56 @@ install-tools: ## Install development tools
 	@go install github.com/air-verse/air@latest
 	@echo "Development tools installed"
 
-# docker-build: ## Build Docker image
-# 	@echo "Building Docker image..."
-# 	@docker build -t $(APP_NAME):latest .
+docker-build: ## Build Docker image
+	@echo "Building Docker image..."
+	@docker build -t $(APP_NAME):latest .
 
-# docker-run: docker-build ## Build and run Docker container
-# 	@echo "Running Docker container..."
-# 	@docker run --rm -p 8080:8080 $(APP_NAME):latest
+docker-up: ## Start services with Docker Compose
+	@echo "Starting services with Docker Compose..."
+	@docker-compose up --build
 
-# docker-test: ## Run tests in Docker container
-# 	@echo "Running tests in Docker..."
-# 	@docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
-# 	@docker-compose -f docker-compose.test.yml down
+docker-up-d: ## Start services with Docker Compose (detached)
+	@echo "Starting services with Docker Compose (detached)..."
+	@docker-compose up --build -d
+
+docker-down: ## Stop Docker services
+	@echo "Stopping Docker services..."
+	@docker-compose down
+
+docker-logs: ## Show Docker logs
+	@docker-compose logs -f
+
+docker-test: ## Run tests in Docker container
+	@echo "Running tests in Docker..."
+	@docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+	@docker-compose -f docker-compose.test.yml down
+
+docker-clean: ## Clean Docker resources
+	@echo "Cleaning Docker resources..."
+	@docker-compose down --volumes --remove-orphans
+	@docker system prune -f
+
+docker-shell: ## Shell into app container
+	@docker-compose exec app sh
+
+docker-db: ## Connect to database
+	@docker-compose exec postgres psql -U postgres -d urlshortener
+
+docker-health: ## Check service health
+	@echo "Checking service health..."
+	@if [ -f .env ]; then export $$(grep -v '^#' .env | xargs); fi; \
+	curl -f http://localhost:$${PORT:-8080}/health || echo "Health check failed"
+
+docker-ps: ## Show Docker container status
+	@docker-compose ps
+
+docker-restart: ## Restart Docker services
+	@echo "Restarting Docker services..."
+	@docker-compose restart
+
+docker-rebuild: ## Rebuild and restart services
+	@echo "Rebuilding and restarting services..."
+	@docker-compose up --build -d
 
 migrate-up: ## Run database migrations up
 	@echo "Running database migrations..."

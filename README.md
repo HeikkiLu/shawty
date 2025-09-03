@@ -2,6 +2,8 @@
 
 A lightweigh URL shortener written in Go with PostgreSQL as the backend.
 
+![Shawty frontend](/img/ui.png)
+
 ## Features
 
 - **URL Shortening**: Generate short URLs with 6-character codes
@@ -12,6 +14,26 @@ A lightweigh URL shortener written in Go with PostgreSQL as the backend.
 - **Race-Safe**: Handles concurrent requests safely
 
 ## Quick Start
+
+### Docker Setup
+
+The easiest way to run the URL shortener is with Docker Compose.
+
+### Quick Start with Docker
+
+```bash
+# Clone the repository
+git clone https://github.com/HeikkiLu/shawty
+cd shawty
+
+# Start with Docker (automatic setup)
+./docker-start.sh
+
+# Or use make commands
+make docker-up
+```
+
+or manually:
 
 ### Prerequisites
 
@@ -28,6 +50,8 @@ cp .env.example .env   # update with your DB config
 make migrate-up # database schema and migrations with flyway
 make run
 ```
+
+
 
 The service will be available at `http://localhost:3001`
 
@@ -150,8 +174,6 @@ The project includes GitHub Actions workflows for:
 - Multiple Go versions support
 - Database integration testing
 - Code coverage reporting
-- Security scanning
-- Performance benchmarking
 
 ### Test Database Setup
 
@@ -193,6 +215,19 @@ export TEST_DB_PORT=5432
 - **Config** (`internal/config`): Configuration management
 - **Utils** (`internal/util`): Utility functions
 
+### Docker
+
+┌─────────────────────────────────────────────────────────────┐
+│                     Docker Compose                         │
+├─────────────────────┬───────────────────────────────────────┤
+│   App Container     │         PostgreSQL Container         │
+│   - Go Application  │         - Database                    │
+│   - Static Files    │         - Auto Migrations            │
+│   - Port 3001       │         - Port 5432                  │
+└─────────────────────┴───────────────────────────────────────┘
+
+
+
 ## Deployment
 
 ### Docker
@@ -202,10 +237,58 @@ export TEST_DB_PORT=5432
 make docker-build
 
 # Run with Docker
-make docker-run
+make docker-up
 
-# Run tests in Docker
-make docker-test
+
+docker-build: ## Build Docker image
+	@echo "Building Docker image..."
+	@docker build -t $(APP_NAME):latest .
+
+docker-up: ## Start services with Docker Compose
+	@echo "Starting services with Docker Compose..."
+	@docker-compose up --build
+
+docker-up-d: ## Start services with Docker Compose (detached)
+	@echo "Starting services with Docker Compose (detached)..."
+	@docker-compose up --build -d
+
+docker-down: ## Stop Docker services
+	@echo "Stopping Docker services..."
+	@docker-compose down
+
+docker-logs: ## Show Docker logs
+	@docker-compose logs -f
+
+docker-test: ## Run tests in Docker container
+	@echo "Running tests in Docker..."
+	@docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+	@docker-compose -f docker-compose.test.yml down
+
+docker-clean: ## Clean Docker resources
+	@echo "Cleaning Docker resources..."
+	@docker-compose down --volumes --remove-orphans
+	@docker system prune -f
+
+docker-shell: ## Shell into app container
+	@docker-compose exec app sh
+
+docker-db: ## Connect to database
+	@docker-compose exec postgres psql -U postgres -d urlshortener
+
+docker-health: ## Check service health
+	@echo "Checking service health..."
+	@if [ -f .env ]; then export $$(grep -v '^#' .env | xargs); fi; \
+	curl -f http://localhost:$${PORT:-8080}/health || echo "Health check failed"
+
+## Show Docker container status
+make docker-ps
+
+## Restart Docker services
+make docker-restart
+
+## Rebuild and restart services
+make docker-rebuild:
+
 ```
 
 ### Environment Variables
@@ -235,7 +318,7 @@ make docker-test
 
 ## Performance
 
-Based on our benchmarks:
+Based on benchmarks:
 
 - **URL Generation**: ~1,700 ns/op (590k ops/sec)
 - **URL Shortening**: ~3,800 ns/op (265k ops/sec)
