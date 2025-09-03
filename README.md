@@ -141,6 +141,10 @@ Test suite includes:
 - **Database Layer**: CRUD operations, constraints, transactions
 - **Integration**: Full application flow testing
 
+#### Testing Strategy
+
+- **Core Tests**: Unit, integration, and E2E tests run in CI/CD
+
 ### Code Quality
 
 ```bash
